@@ -9,15 +9,15 @@ A Gladys Assistant **external integration**: a Node.js service (Node 22+, ESM,
 no build step) that runs in its own sandboxed Docker container and talks to
 Gladys through
 [`@gladysassistant/integration-sdk`](https://github.com/GladysAssistant/integration-sdk-js),
-its only runtime dependency. It started from the official JavaScript template.
+its main runtime dependency (with `jpeg-js` for the camera images). It started from the official JavaScript template.
 
 ## Commands
 
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/monitor.test.js          # one file
+node --test --test-name-pattern "widget"  # tests whose name matches
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -32,15 +32,20 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/app.js                        registers every SDK handler on the monitor; the "check" action
+src/monitor.js                    cameras, analyses, timer, states, images, scene events, status
+src/doods.js                      DOODS REST client (/detectors, /detect) and its errors
+src/snapshot.js                   camera addresses: HTTP snapshot download, RTSP handed to DOODS
+src/devices.js                    the camera device (features, external ids), label names, summary
+src/image.js, image-worker.js,    JPEG shrunk to the 150 KB of a Gladys camera image, in a worker
+  jpeg-scaled.js                    (from gladys-shinobi)
+src/scenes.js                     scene action `analyze`
+src/widgets.js                    dashboard widget `camera`
+src/texts.js                      status, failures (ActionFailure), check report, in en/fr/de/es
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
-gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+gladys-assistant-integration.json manifest: config (4 camera slots), actions, triggers, widget
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (same sections)
+test/                             node --test, the SDK's fake Gladys + a fake DOODS (recorded answers)
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -58,7 +63,7 @@ test/                             node --test, against the SDK's fake Gladys (in
   one, `0`/`0` for a feature without a range (text, image...). A missing one
   can pass the publication on a core that does not check it, then fail when
   the user clicks "Add" (HTTP 422 `t_device_feature.min cannot be null`). The
-  SDK's fake Gladys refuses it on publication, and `test/devices.test.js`
+  SDK's fake Gladys refuses it on publication, and `test/gladys-rules.test.js`
   checks them.
 - **The container rootfs is read-only.** Write only under `/data`, the one
   writable volume. Never log tokens, passwords or API keys.
@@ -78,8 +83,9 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in English, French, German and Spanish: action
+  messages, manifest texts, widget content, feature names, and
+  `docs/{en,fr,de,es}.md`, kept in sync. `test/i18n.test.js` enforces it.
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -259,3 +265,28 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+## DOODS (propre à cette intégration)
+
+- API de `snowzach/doods2` (FastAPI) : `GET /detectors` → `{ detectors: [{ name, type, model, labels, width,
+height }] }` ; `POST /detect` `{ detector_name, data, detect: { <label>: <confiance %>, "*": … }, image: "jpeg" }`
+  → `{ detections: [{ top, left, bottom, right, label, confidence }], duration, image? }`. Confiances **en
+  pourcentage**, coordonnées relatives (0-1), étiquettes COCO en minuscules, parfois avec espace (`traffic light`).
+  Le filtre est fait par DOODS (`filter_detections`) : un `detect` vide ne renvoie **rien**.
+- `data` est du base64 **ou une URL** (`http`, `rtsp`, `ftp`) que DOODS ouvre avec OpenCV. Erreurs : 400 `{ error:
+"unknown detector name: x" }` ; une image illisible ou un flux qui ne s'ouvre pas lève côté Python → **500 nu**
+  (`Internal Server Error`, sans JSON). D'où le choix : le conteneur télécharge lui-même les instantanés HTTP
+  (« caméra injoignable » ≠ « DOODS injoignable »), et ne confie à DOODS que les flux RTSP.
+- `image: "jpeg"` renvoie l'image **pleine taille** avec cadres et libellés (1,2 Mo pour une photo 1280 × 1707) :
+  réduite par `src/image.js` (worker, décodeur réduit) sous les 150 Ko de Gladys.
+- Le détecteur `tensorflow` met **plus d'une minute** sur sa première image (chargement du modèle), puis ~2 s ;
+  `default` (tflite) ~0,3 s sur CPU. Le client attend 25 s : la première analyse tensorflow peut échouer une fois
+  (« DOODS n'a pas répondu à temps »), sans passer le serveur en rouge.
+- Le conteneur DOODS sans DNS journalise « Could not create detector pytorch » au démarrage : sans effet sur
+  `default` et `tensorflow`.
+- Une intégration externe **ne peut pas lire l'image d'une caméra d'une autre intégration** (aucune API du SDK) :
+  l'utilisateur donne l'URL de la caméra. Emplacements fixes `camera_1…4` (le formulaire n'a pas de liste),
+  l'emplacement est l'identité de l'appareil.
+- Déclencheur `object_detected` sur **apparition** (étiquette absente de l'analyse régulière précédente) ; seules les
+  analyses régulières le déclenchent : l'action de scène `analyze` n'en émet aucun (pas de boucle), et la création
+  d'un appareil non plus. Avec l'intervalle « à la demande », aucun déclencheur.

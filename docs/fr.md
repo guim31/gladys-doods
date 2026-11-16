@@ -1,67 +1,121 @@
-# Template de démonstration
+# DOODS
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+Apporte la **détection d'objets locale** de [DOODS](https://github.com/snowzach/doods2) (Dedicated
+Open Object Detection Service) aux images de vos caméras : Gladys sait si une personne, une voiture,
+un chat… est dans le champ, combien, et affiche l'image avec les cadres tracés par DOODS. Tout reste
+chez vous : pas de cloud, pas de compte. DOODS analyse une image à la demande ; ce n'est pas un
+enregistreur vidéo (voir Frigate ou Viseron pour cela).
 
-## Ce que vous obtenez
+Testée contre un vrai serveur DOODS en Docker (snowzach/doods2, processeur, détecteurs `default`
+tflite et `tensorflow`) avec des photos libres (une personne, des voitures, un chat, une pièce vide),
+pas encore avec de vraies caméras en service : vos retours sont les bienvenus sur
+[GitHub](https://github.com/guim31/gladys-doods/issues) ou sur le forum Gladys.
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+## Prérequis
 
-## Configuration
+- Gladys 5.1 ou plus récent.
+- Un serveur DOODS (image Docker `snowzach/doods2`), joignable depuis Gladys sur son port (8080 par
+  défaut).
+- Pour chaque caméra, une adresse que DOODS peut lire : une **URL d'instantané JPEG** (la plupart des
+  caméras IP en ont une, ex. `http://utilisateur:motdepasse@192.168.1.30/snapshot.jpg`) ou un **flux
+  RTSP** (`rtsp://…`).
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+Une intégration ne peut pas lire l'image d'une caméra déjà présente dans Gladys (pas d'accès prévu
+pour les intégrations externes) : donnez l'adresse de la caméra elle-même.
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+## Installation
 
-## Actions
+1. Lancez DOODS, par exemple : `docker run -d --restart unless-stopped -p 8080:8080 snowzach/doods2`.
+2. Dans Gladys, **Intégrations → Installer depuis GitHub**, adresse
+   `https://github.com/guim31/gladys-doods`.
+3. Dans la configuration, renseignez **Adresse de DOODS**, puis pour chaque caméra (quatre au plus)
+   un **Nom** et une **Adresse de l'image**.
+4. Lancez l'action **Vérifier la connexion** : elle indique le détecteur et analyse chaque caméra une
+   fois.
+5. Ouvrez l'onglet **Découverte** et ajoutez les caméras : un appareil par caméra.
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+Réglages :
+
+- **Détecteur** : `default` (tflite, rapide : environ 0,3 s par image sur un processeur) ou
+  `tensorflow` (plus précis, environ 2 s, et plus d'une minute pour sa toute première image, le temps
+  de charger le modèle), ou tout détecteur configuré dans votre DOODS.
+- **Objets recherchés** : les étiquettes du détecteur, en anglais, séparées par des virgules :
+  `person`, `car`, `truck`, `bicycle`, `motorcycle`, `cat`, `dog`, `bird`… (les 80 étiquettes COCO).
+  `*` garde toutes les étiquettes. Chaque caméra peut avoir sa propre liste dans **Objets
+  (facultatif)**.
+- **Confiance minimale** : les détections en dessous sont ignorées. Une caméra peut avoir la sienne
+  dans **Confiance en % (facultatif)**.
+- **Intervalle d'analyse** : la fréquence d'analyse de chaque caméra ajoutée, l'une après l'autre.
+  **À la demande seulement** n'analyse rien de lui-même (action de scène, bouton du widget, image
+  demandée par Gladys).
+- **Langue des noms** : noms des fonctionnalités, objets et textes des scènes.
+
+**Charge du processeur** : chaque analyse décode une image et fait tourner le modèle sur la machine
+de DOODS. Avec quatre caméras toutes les 10 secondes et le détecteur `tensorflow`, une petite machine
+est occupée en permanence ; 1 minute avec `default` est un bon point de départ.
+
+## Les appareils dans Gladys
+
+Un appareil par caméra, avec :
+
+- **Image** : la dernière image analysée, avec les cadres tracés par DOODS (réduite pour Gladys).
+- **Objet détecté** : un des objets recherchés est dans le champ (Oui/Non).
+- **Objets détectés** : ce qui est dans le champ, ex. « Personne ×2, Voiture », ou « Aucun ».
+- Un compteur par étiquette recherchée, ex. **Personne (nombre)**, **Voiture (nombre)** (pas avec
+  `*`).
+
+Le badge de l'appareil passe à « injoignable » quand l'image de la caméra ne peut pas être lue.
+
+## Widget du tableau de bord
+
+**Caméra DOODS** : l'image analysée, les objets trouvés, la meilleure confiance, le nombre de chaque
+étiquette recherchée, l'heure de l'analyse, et un bouton **Analyser maintenant** (le réglage
+**Masquer le bouton Analyser** le cache).
 
 ## Scènes
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+### Déclencheurs
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+- **Objet détecté par DOODS** : un objet apparaît lors d'une analyse régulière (il était absent de la
+  précédente), sur une caméra ou n'importe laquelle. Filtre sur les objets. Variables : caméra, objet,
+  nombre, confiance. Un seul événement quand l'objet apparaît, pas un par analyse.
+- **Image de caméra non lue** : l'image d'une caméra n'a pas pu être lue (premier échec d'affilée).
 
-## Tableau de bord
+Les déclencheurs viennent des seules analyses régulières : avec **À la demande seulement**, ils ne se
+déclenchent jamais.
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+### Actions
+
+- **Analyser une caméra avec DOODS** : analyse la caméra maintenant et met à jour son image. Sorties :
+  objet détecté, objets détectés, nombre d'objets, nombre de personnes, meilleure confiance. Elle ne
+  déclenche aucun déclencheur.
+
+### Idées de scènes
+
+- Quand la porte d'entrée s'ouvre, **Analyser une caméra avec DOODS**, puis si le nombre de personnes
+  dépasse 0, l'action « Envoyer une image de caméra » du cœur vous envoie l'image avec ses cadres.
+- **Objet détecté par DOODS** (personne, caméra du jardin) quand l'alarme est active → notification.
+- Une voiture dans l'allée la nuit → allumer l'éclairage extérieur.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **DOODS ne répond pas** : vérifiez l'adresse et le port (8080), et que DOODS tourne
+  (`docker logs`).
+- **Pas de détecteur « … »** : le statut liste les détecteurs de votre serveur ; recopiez le nom dans
+  **Détecteur**.
+- **Image non lue** : ouvrez l'adresse de la caméra dans un navigateur depuis la machine de Gladys.
+  Une adresse HTTP doit donner une image JPEG, pas une page. L'authentification Digest n'est pas prise
+  en charge en HTTP : utilisez plutôt le flux RTSP. Un flux RTSP est lu par DOODS lui-même, qui doit
+  donc joindre la caméra.
+- **Étiquettes inconnues de ce détecteur** : une faute de frappe dans **Objets recherchés**, ou un
+  autre modèle.
+- **Rien n'est détecté** : baissez la **Confiance minimale**, ou essayez le détecteur `tensorflow`.
+- Logs détaillés : `LOG_LEVEL=debug`.
+
+## Limites
+
+- Quatre caméras au plus, et huit étiquettes comptées par caméra.
+- Pas de vidéo : une image par analyse ; un objet qui passe entre deux analyses n'est pas vu.
+- Pas de zones de détection (`regions` de DOODS) dans cette version.
+- Les images des caméras partent vers Gladys au plus toutes les 5 secondes par caméra.
+- Sans lien avec le projet DOODS. Développée sans vraies caméras : vos retours sont les bienvenus.

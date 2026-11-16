@@ -30,6 +30,15 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+The integration stores nothing in `/data`. Its configuration (held by Gladys)
+holds the address of the DOODS server and the camera addresses, which may
+carry a user name and password (`http://user:password@…`, `rtsp://…`): they
+are sent only to the camera (an HTTP Basic header) or to DOODS (an RTSP
+stream DOODS opens), and never logged (the logs show the scheme, host and
+port only). It talks to DOODS and the cameras on the local network, over
+HTTP unless an `https://` address is given; DOODS itself has no
+authentication.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+DOODS, and the cameras the integration reads.
