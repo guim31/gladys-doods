@@ -56,8 +56,15 @@ export async function fetchSnapshot(url, { fetch: fetchImpl = globalThis.fetch }
   const target = new URL(url);
   const headers = { accept: 'image/jpeg,image/*;q=0.8' };
   if (target.username || target.password) {
-    const user = decodeURIComponent(target.username);
-    const password = decodeURIComponent(target.password);
+    let user;
+    let password;
+    try {
+      user = decodeURIComponent(target.username);
+      password = decodeURIComponent(target.password);
+    } catch {
+      // A bare "%" in the password: write it %25 in the address.
+      throw new SnapshotError('format', 'Invalid user or password in the camera address');
+    }
     headers.authorization = `Basic ${Buffer.from(`${user}:${password}`).toString('base64')}`;
     target.username = '';
     target.password = '';

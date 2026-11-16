@@ -52,12 +52,17 @@ export async function check(monitor) {
     }
   }
   logger.info(`Connection checked: ${cameras.length} camera(s)`);
-  return checkMessage({
+  const report = checkMessage({
     url: monitor.client.base,
     detector: server.detector,
     unknownLabels: monitor.unknownLabels(),
     cameras,
   });
+  // Red when no configured camera could be read: the setup does not work yet.
+  if (cameras.length > 0 && cameras.every((camera) => camera.failed)) {
+    throw new ActionFailure(report);
+  }
+  return report;
 }
 
 /**

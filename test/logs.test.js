@@ -88,3 +88,14 @@ test('DOODS down is one line, then one when it is back', async (t) => {
   assert.equal(count(lines, 'DOODS answers, detector default'), 1, lines.join('\n'));
   assert.ok(lines.length <= 3, lines.join('\n'));
 });
+
+test('a missing detector is one line, not one per housekeeping', async (t) => {
+  const world = await createWorld({ config: { ...BASE_CONFIG, detector: 'yolo' } });
+  t.after(() => world.app.stop());
+  const { lines, restore } = captureLogs(t);
+  for (let round = 0; round < 3; round += 1) {
+    await world.monitor.housekeeping();
+  }
+  restore();
+  assert.deepEqual(lines, []);
+});

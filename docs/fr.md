@@ -78,7 +78,9 @@ Le badge de l'appareil passe à « injoignable » quand l'image de la caméra ne
 
 - **Objet détecté par DOODS** : un objet apparaît lors d'une analyse régulière (il était absent de la
   précédente), sur une caméra ou n'importe laquelle. Filtre sur les objets. Variables : caméra, objet,
-  nombre, confiance. Un seul événement quand l'objet apparaît, pas un par analyse.
+  nombre, confiance. Un seul événement quand l'objet apparaît, pas un par analyse. Ce qui est déjà
+  dans le champ à l'ajout de l'appareil, après un redémarrage ou un changement de réglages ne compte
+  pas. Le filtre propose les objets courants : pour une autre étiquette, laissez-le vide.
 - **Image de caméra non lue** : l'image d'une caméra n'a pas pu être lue (premier échec d'affilée).
 
 Les déclencheurs viennent des seules analyses régulières : avec **À la demande seulement**, ils ne se
@@ -115,6 +117,9 @@ déclenchent jamais.
 ## Limites
 
 - Quatre caméras au plus, et huit étiquettes comptées par caméra.
+- L'adresse de la caméra, mot de passe compris, est enregistrée dans la configuration de
+  l'intégration et y reste visible aux administrateurs de Gladys : préférez un utilisateur de caméra
+  qui ne peut que regarder.
 - Pas de vidéo : une image par analyse ; un objet qui passe entre deux analyses n'est pas vu.
 - Pas de zones de détection (`regions` de DOODS) dans cette version.
 - Les images des caméras partent vers Gladys au plus toutes les 5 secondes par caméra.

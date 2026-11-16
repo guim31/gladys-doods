@@ -289,4 +289,6 @@ height }] }` ; `POST /detect` `{ detector_name, data, detect: { <label>: <confia
   l'emplacement est l'identité de l'appareil.
 - Déclencheur `object_detected` sur **apparition** (étiquette absente de l'analyse régulière précédente) ; seules les
   analyses régulières le déclenchent : l'action de scène `analyze` n'en émet aucun (pas de boucle), et la création
-  d'un appareil non plus. Avec l'intervalle « à la demande », aucun déclencheur.
+  d'un appareil non plus. La première analyse depuis un démarrage, un ajout ou un changement de réglages ne fait
+  qu'enregistrer la scène (`seeded`) : ce qui est déjà dans le champ n'« apparaît » pas. `camera_unreachable` part
+  une fois par panne, à la première analyse régulière qui échoue, même si une analyse à la demande l'a vue avant. Avec l'intervalle « à la demande », aucun déclencheur.

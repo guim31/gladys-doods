@@ -73,7 +73,9 @@ setting hides it).
 
 - **Object detected by DOODS**: an object appears in a regular analysis (it was absent from the
   previous one), on one camera or any. Filter on the objects. Variables: camera, object, count,
-  confidence. One event when the object appears, not one per analysis.
+  confidence. One event when the object appears, not one per analysis. What is already in view when
+  the device is added, after a restart or a change of settings does not count. The filter lists the
+  common objects: for another label, leave it empty.
 - **Camera image not read**: the picture of a camera could not be read (the first failure in a row).
 
 Triggers come from the regular analyses only: with **On demand only**, they never fire.
@@ -105,6 +107,8 @@ Triggers come from the regular analyses only: with **On demand only**, they neve
 ## Limits
 
 - Four cameras at most, and eight counted labels per camera.
+- The camera address, password included, is stored in the integration configuration and visible
+  there to the Gladys administrators: prefer a camera user that can only view.
 - No video: one picture per analysis; an object passing between two analyses is missed.
 - No detection regions (DOODS `regions`) in this version.
 - Camera images go to Gladys at most every 5 seconds per camera.

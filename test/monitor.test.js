@@ -184,43 +184,90 @@ test('regular analyses: only changes are published, an event when an object appe
   await createAll(world);
   world.clock.advance(60_000);
   await world.monitor.tick();
-  // First regular analysis: what is there "appears" once.
-  assert.deepEqual(
-    world.fake.sceneEvents.map((event) => [event.key, event.data.camera, event.data.label]),
-    [
-      ['object_detected', ID.front, 'car'],
-      ['object_detected', ID.front, 'person'],
-      ['object_detected', ID.garden, 'cat'],
-    ],
-  );
-  assert.deepEqual(world.fake.sceneEvents[1].data, {
-    camera: ID.front,
-    camera_name: 'Front door',
-    label: 'person',
-    label_name: 'Person',
-    count: 1,
-    confidence: 68,
-  });
+  // Already in view when the device was added: nothing "appeared".
+  assert.deepEqual(world.fake.sceneEvents, []);
   const states = world.fake.states.length;
   world.clock.advance(60_000);
   await world.monitor.tick();
   assert.equal(world.fake.states.length, states, 'nothing changed, nothing published');
-  assert.equal(world.fake.sceneEvents.length, 3, 'still there: no new event');
 
-  // The person leaves the garden camera's view… then a car comes into it.
+  // The cat leaves the garden… then a car comes into view.
   world.server.scene('garden', 'empty');
   world.clock.advance(60_000);
   await world.monitor.tick();
   assert.equal(last(world, `${ID.garden}:object`), 0);
   assert.equal(text(world, `${ID.garden}:objects`), 'None');
   world.server.scene('garden', 'car');
+  world.server.scene('front', 'cat');
   world.clock.advance(60_000);
   await world.monitor.tick();
   assert.deepEqual(
-    world.fake.sceneEvents.slice(3).map((event) => [event.data.camera, event.data.label]),
-    [[ID.garden, 'car']],
+    world.fake.sceneEvents.map((event) => [event.key, event.data.camera, event.data.label]),
+    [
+      ['object_detected', ID.front, 'cat'],
+      ['object_detected', ID.garden, 'car'],
+    ],
   );
+  assert.deepEqual(world.fake.sceneEvents[1].data, {
+    camera: ID.garden,
+    camera_name: 'Garden',
+    label: 'car',
+    label_name: 'Car',
+    count: 1,
+    confidence: 66,
+  });
   assert.equal(last(world, `${ID.garden}:count-car`), 1);
+});
+
+test('after a restart, the first regular analysis records the scene without an event', async (t) => {
+  const created = (await createWorld()).fake.discoveredDevices;
+  const world = await createWorld({ created });
+  t.after(() => world.app.stop());
+  await world.monitor.tick();
+  assert.deepEqual(world.fake.sceneEvents, []);
+  world.server.scene('front', 'cat');
+  world.clock.advance(60_000);
+  await world.monitor.tick();
+  assert.deepEqual(
+    world.fake.sceneEvents.map((event) => event.data.label),
+    ['cat'],
+  );
+});
+
+test('a failure first seen on demand still fires one "camera unreachable" event', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.app.stop());
+  await createAll(world);
+  world.server.cameras.get('front').down = true;
+  const ack = await world.fake.sceneAction('analyze', { camera: ID.front });
+  assert.equal(ack.success, false);
+  assert.deepEqual(world.fake.sceneEvents, []);
+  for (let round = 0; round < 2; round += 1) {
+    world.clock.advance(60_000);
+    await world.monitor.tick();
+  }
+  assert.equal(world.fake.sceneEvents.filter((e) => e.key === 'camera_unreachable').length, 1);
+  // Gladys asks for the image: no old picture passed off as current.
+  const image = await world.fake.getImage({ external_id: ID.front });
+  assert.equal(image.success, false);
+});
+
+test('a bare % in the camera password is the camera address, not DOODS', async () => {
+  const server = new FakeDoods();
+  await assert.rejects(
+    fetchSnapshot(new URL(`http://admin:p%zz@192.0.2.20/front.jpg`), { fetch: server.fetch }),
+    (err) => err instanceof SnapshotError && err.kind === 'format',
+  );
+});
+
+test('the check action is red when no camera can be read', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.app.stop());
+  world.server.cameras.get('front').down = true;
+  world.server.cameras.get('garden').down = true;
+  const ack = await world.fake.action('check', {});
+  assert.equal(ack.success, false);
+  assert.match(ack.error.fr, /Front door : image non lue/);
 });
 
 test('the threshold and the labels of a camera are sent to DOODS and applied', async (t) => {

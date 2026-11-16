@@ -76,7 +76,9 @@ Einstellung **Schaltfläche Analysieren ausblenden** blendet sie aus).
 
 - **Objekt von DOODS erkannt**: Ein Objekt erscheint bei einer regelmäßigen Analyse (in der vorherigen
   war es nicht da), auf einer Kamera oder auf jeder. Filter auf die Objekte. Variablen: Kamera, Objekt,
-  Anzahl, Konfidenz. Ein Ereignis, wenn das Objekt erscheint, nicht eines pro Analyse.
+  Anzahl, Konfidenz. Ein Ereignis, wenn das Objekt erscheint, nicht eines pro Analyse. Was beim
+  Hinzufügen des Geräts, nach einem Neustart oder einer Änderung der Einstellungen schon im Bild ist,
+  zählt nicht. Der Filter bietet die gängigen Objekte an: Für ein anderes Label lass ihn leer.
 - **Kamerabild nicht gelesen**: Das Bild einer Kamera konnte nicht gelesen werden (erster Fehler in
   Folge).
 
@@ -112,6 +114,9 @@ Die Auslöser kommen nur aus den regelmäßigen Analysen: Mit **Nur auf Anfrage*
 ## Grenzen
 
 - Höchstens vier Kameras und acht gezählte Labels pro Kamera.
+- Die Kameraadresse samt Passwort wird in der Konfiguration der Integration gespeichert und ist dort
+  für die Gladys-Administratoren sichtbar: Nimm am besten einen Kamerabenutzer, der nur zusehen
+  darf.
 - Kein Video: ein Bild pro Analyse; ein Objekt, das zwischen zwei Analysen vorbeikommt, wird
   übersehen.
 - Keine Erkennungszonen (`regions` von DOODS) in dieser Version.

@@ -67,7 +67,10 @@ export class DoodsMonitor {
     this.server = null;
     this.cameras = new Map();
     this.timers = [];
+    this.timeouts = [];
     this.ticking = false;
+    // Bumped by each configuration: a run started before drops its result.
+    this.generation = 0;
     // One analysis at a time on the DOODS server.
     this.queue = Promise.resolve();
     this.statesFailing = false;
@@ -77,18 +80,20 @@ export class DoodsMonitor {
 
   async start(config) {
     this.applyConfig(config);
+    // Timers first: a failed publication below must not leave the
+    // integration without its housekeeping.
+    this.schedule();
     await this.checkServer();
     await this.publishDevices();
-    this.schedule();
   }
 
   async reconfigure(config) {
     this.stopTimers();
     this.applyConfig(config);
+    this.schedule();
     await this.checkServer();
     await this.publishDevices();
     this.requestWidgetRefresh();
-    this.schedule();
   }
 
   /** Gladys came back (a reconnection): what it may have lost, again. */
@@ -108,11 +113,17 @@ export class DoodsMonitor {
     for (const timer of this.timers) {
       clearInterval(timer);
     }
+    for (const timer of this.timeouts) {
+      clearTimeout(timer);
+    }
     this.timers = [];
+    this.timeouts = [];
   }
 
   applyConfig(config) {
+    const languageChanged = this.config && this.config.language !== config.language;
     this.config = config;
+    this.generation += 1;
     const url = parseServerUrl(config.url);
     this.client = url ? new DoodsClient({ url, fetch: this.fetch }) : null;
     const previous = this.cameras;
@@ -124,13 +135,16 @@ export class DoodsMonitor {
         known &&
         known.url === item.url &&
         JSON.stringify(known.labels) === JSON.stringify(item.labels) &&
-        known.confidence === item.confidence;
+        known.confidence === item.confidence &&
+        !languageChanged;
       this.cameras.set(item.slot, {
         ...item,
         result: same ? known.result : null,
         detections: same ? known.detections : [],
         image: same ? known.image : null,
         present: same ? known.present : new Set(),
+        // `present` holds what the last analysis saw (see fireAppeared).
+        seeded: same ? known.seeded : false,
         failure: same ? known.failure : null,
         analyzedAt: same ? known.analyzedAt : 0,
         imagePublishedAt: same ? known.imagePublishedAt : 0,
@@ -152,7 +166,9 @@ export class DoodsMonitor {
     if (this.config.intervalSeconds > 0) {
       every(this.config.intervalSeconds * 1000, () => this.tick());
       // The first analyses without waiting a full interval.
-      setTimeout(() => this.tick().catch((err) => logger.debug(err.message)), 1000).unref?.();
+      const first = setTimeout(() => this.tick().catch((err) => logger.debug(err.message)), 1000);
+      first.unref?.();
+      this.timeouts.push(first);
     }
     every(this.timings.housekeepingMs, () => this.housekeeping());
   }
@@ -170,6 +186,7 @@ export class DoodsMonitor {
       const detectors = await this.client.detectors();
       const detector = detectors.find((item) => item.name === this.config.detector);
       if (!detector) {
+        const again = this.server?.problem === 'detector';
         this.server = { ok: false, problem: 'detector', detectors };
         await this.setStatus(
           false,
@@ -178,7 +195,7 @@ export class DoodsMonitor {
             detectors.map((item) => item.name),
           ),
         );
-        logger.warn(`DOODS has no detector "${this.config.detector}"`);
+        logger[again ? 'debug' : 'warn'](`DOODS has no detector "${this.config.detector}"`);
         return this.server;
       }
       this.server = { ok: true, detector, detectors };
@@ -423,6 +440,7 @@ export class DoodsMonitor {
   }
 
   async runAnalysis(camera, { events }) {
+    const generation = this.generation;
     if (!this.client || !this.server?.ok) {
       throw new ActionFailure(FAILURE.notConfigured);
     }
@@ -450,6 +468,10 @@ export class DoodsMonitor {
       await this.doodsFailed(err);
       throw new ActionFailure(FAILURE.doods);
     }
+    if (generation !== this.generation) {
+      // The configuration changed meanwhile: this camera object is gone.
+      return summarize(result.detections, camera, this.config.language);
+    }
     const summary = summarize(result.detections, camera, this.config.language);
     const now = this.clock();
     const changed = camera.result?.text !== summary.text;
@@ -468,7 +490,8 @@ export class DoodsMonitor {
       try {
         camera.image = { jpeg: await fitJpeg(picture), at: now };
         camera.imageSeq += 1;
-        await this.publishImage(camera);
+        // The gap guards the regular analyses; one asked for is shown.
+        await this.publishImage(camera, { force: !events });
       } catch (err) {
         logger.debug(`The picture of ${camera.name} does not fit Gladys: ${err.message}`);
       }
@@ -476,6 +499,11 @@ export class DoodsMonitor {
     await this.publishStates(camera);
     if (events) {
       await this.fireAppeared(camera, summary);
+    } else if (!camera.seeded) {
+      // The first look (device added, restart, new settings): what is
+      // already in view did not "appear".
+      camera.present = new Set(summary.labels);
+      camera.seeded = true;
     }
     if (changed) {
       this.requestWidgetRefresh();
@@ -497,8 +525,11 @@ export class DoodsMonitor {
 
   async fireAppeared(camera, summary) {
     const now = new Set(summary.labels);
+    // The first look since a start or new settings only records the scene.
+    const seeded = camera.seeded;
+    camera.seeded = true;
     for (const label of summary.labels) {
-      if (camera.present.has(label) || !this.createdDevice(camera)) {
+      if (!seeded || camera.present.has(label) || !this.createdDevice(camera)) {
         continue;
       }
       await this.gladys
@@ -516,18 +547,25 @@ export class DoodsMonitor {
   }
 
   async cameraFailed(camera, err, events) {
+    const previousNotified = camera.failure?.notified ?? false;
     const first = !camera.failure;
-    camera.failure = { at: this.clock(), message: err.message };
-    camera.analyzedAt = this.clock();
+    camera.failure = { at: this.clock(), message: err.message, notified: false };
     if (!first) {
-      logger.debug(`${camera.name} (${redact(camera.url)}): ${err.message}`);
-      return;
+      camera.failure.notified = previousNotified;
     }
-    logger.warn(`Camera ${camera.name} (${redact(camera.url)}): ${err.message}`);
-    camera.transportSent = true;
-    await this.publishTransport(camera);
-    this.requestWidgetRefresh();
-    if (events && this.createdDevice(camera)) {
+    camera.analyzedAt = this.clock();
+    if (first) {
+      logger.warn(`Camera ${camera.name} (${redact(camera.url)}): ${err.message}`);
+      camera.transportSent = true;
+      await this.publishTransport(camera);
+      this.requestWidgetRefresh();
+    } else {
+      logger.debug(`${camera.name} (${redact(camera.url)}): ${err.message}`);
+    }
+    // Once per outage, from a regular analysis (even when an on-demand one
+    // saw the failure first).
+    if (events && !camera.failure.notified && this.createdDevice(camera)) {
+      camera.failure.notified = true;
       await this.gladys
         .publishSceneEvent(TRIGGERS.UNREACHABLE, {
           camera: this.ids(camera).device,
@@ -578,7 +616,8 @@ export class DoodsMonitor {
     if (!fresh && this.server?.ok) {
       await this.analyze(camera, { events: false }).catch(() => {});
     }
-    if (!camera.image) {
+    // A camera down: no old picture passed off as the current one.
+    if (!camera.image || camera.failure) {
       throw new ActionFailure(FAILURE.camera);
     }
     return asCameraImage(camera.image.jpeg);

@@ -75,7 +75,9 @@ Analizar** lo oculta).
 
 - **Objeto detectado por DOODS**: un objeto aparece en un análisis regular (estaba ausente del
   anterior), en una cámara o en cualquiera. Filtro por objetos. Variables: cámara, objeto, número,
-  confianza. Un evento cuando el objeto aparece, no uno por análisis.
+  confianza. Un evento cuando el objeto aparece, no uno por análisis. Lo que ya está a la vista al
+  añadir el dispositivo, tras un reinicio o un cambio de ajustes no cuenta. El filtro ofrece los
+  objetos habituales: para otra etiqueta, déjelo vacío.
 - **Imagen de cámara no leída**: no se pudo leer la imagen de una cámara (primer fallo seguido).
 
 Los disparadores proceden solo de los análisis regulares: con **Solo bajo demanda**, nunca se
@@ -112,6 +114,8 @@ disparan.
 ## Límites
 
 - Cuatro cámaras como máximo y ocho etiquetas contadas por cámara.
+- La dirección de la cámara, contraseña incluida, se guarda en la configuración de la integración y
+  allí la ven los administradores de Gladys: es preferible un usuario de cámara que solo pueda ver.
 - Sin vídeo: una imagen por análisis; un objeto que pasa entre dos análisis no se ve.
 - Sin zonas de detección (`regions` de DOODS) en esta versión.
 - Las imágenes de las cámaras se envían a Gladys como máximo cada 5 segundos por cámara.
