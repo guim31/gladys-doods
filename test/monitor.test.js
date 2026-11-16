@@ -541,3 +541,16 @@ test('the heartbeat re-sends unchanged states after 12 hours', async (t) => {
   await world.monitor.housekeeping();
   assert.ok(world.fake.states.length > count);
 });
+
+test('cameras missed at start (server not ready) are analyzed at the next housekeeping', async (t) => {
+  const server = new FakeDoods();
+  server.down = true;
+  const created = (await createWorld()).fake.discoveredDevices;
+  const world = await createWorld({ server, created });
+  t.after(() => world.app.stop());
+  await world.monitor.tick();
+  server.down = false;
+  await world.monitor.housekeeping();
+  assert.equal(text(world, `${ID.front}:objects`), 'Car ×2, Person');
+  assert.equal(text(world, `${ID.garden}:objects`), 'Cat');
+});

@@ -418,6 +418,14 @@ export class DoodsMonitor {
     for (const camera of this.cameras.values()) {
       await this.publishStates(camera);
     }
+    // The first analyses missed their start (the server was not ready yet):
+    // do not wait a full interval for them.
+    const waiting = [...this.cameras.values()].some(
+      (camera) => camera.validUrl && !camera.analyzedAt && this.createdDevice(camera),
+    );
+    if (waiting && this.config.intervalSeconds > 0) {
+      await this.tick();
+    }
   }
 
   /**
