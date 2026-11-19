@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-19
+
 ### Added
 
 - Local object detection with DOODS on up to four cameras (JPEG snapshot URL
@@ -25,3 +27,6 @@ the notes of the version's GitHub Release.
 - "Check the connection" action: the detector, the unknown labels, one
   analysis per camera.
 - English, French, German and Spanish.
+
+[Unreleased]: https://github.com/guim31/gladys-doods/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guim31/gladys-doods/releases/tag/v1.0.0
