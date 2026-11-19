@@ -1,177 +1,1003 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "DOODS",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Local object detection on your camera images with DOODS: person, car, cat… without the cloud.",
+    "fr": "Détection locale d’objets sur vos caméras avec DOODS : personne, voiture, chat… sans cloud",
+    "de": "Lokale Objekterkennung in deinen Kamerabildern mit DOODS: Person, Auto, Katze… ohne Cloud.",
+    "es": "Detección local de objetos en las imágenes de sus cámaras con DOODS: persona, coche, gato… sin nube."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-doods:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-doods/main/cover.png",
+  "categories": ["security"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your DOODS server",
+        "fr": "Votre serveur DOODS",
+        "de": "Dein DOODS-Server",
+        "es": "Su servidor DOODS"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "DOODS detects objects (person, car, cat…) in pictures, on your own machine. Enter its address, then up to four cameras below, and open the Discovery tab: one device per camera.",
+        "fr": "DOODS détecte les objets (personne, voiture, chat…) dans des images, sur votre propre machine. Saisissez son adresse, puis jusqu'à quatre caméras ci-dessous, et ouvrez l'onglet Découverte : un appareil par caméra.",
+        "de": "DOODS erkennt Objekte (Person, Auto, Katze…) in Bildern, auf deinem eigenen Rechner. Gib seine Adresse und unten bis zu vier Kameras ein und öffne dann den Tab „Entdecken“: ein Gerät pro Kamera.",
+        "es": "DOODS detecta objetos (persona, coche, gato…) en imágenes, en su propia máquina. Introduzca su dirección y hasta cuatro cámaras más abajo, y abra la pestaña Descubrir: un dispositivo por cámara."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://github.com/guim31/gladys-doods/blob/main/docs/en.md",
+          "label": {
+            "en": "Setup guide",
+            "fr": "Guide d'installation",
+            "de": "Installationsanleitung",
+            "es": "Guía de instalación"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "url",
+      "type": "string",
+      "label": {
+        "en": "DOODS address",
+        "fr": "Adresse de DOODS",
+        "de": "DOODS-Adresse",
+        "es": "Dirección de DOODS"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
+      "description": {
+        "en": "Without a port, 8080 is used. Add https:// for a reverse proxy.",
+        "fr": "Sans port, 8080 est utilisé. Ajoutez https:// derrière un proxy inverse.",
+        "de": "Ohne Port wird 8080 verwendet. Füge https:// hinter einem Reverse-Proxy hinzu.",
+        "es": "Sin puerto, se usa el 8080. Añada https:// detrás de un proxy inverso."
+      },
+      "placeholder": {
+        "en": "e.g. 192.168.1.20",
+        "fr": "ex. 192.168.1.20",
+        "de": "z. B. 192.168.1.20",
+        "es": "p. ej. 192.168.1.20"
+      },
       "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "default": ""
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "detector",
+      "type": "string",
+      "label": {
+        "en": "Detector",
+        "fr": "Détecteur",
+        "de": "Detektor",
+        "es": "Detector"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
-    },
-    {
-      "key": "unit",
-      "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "description": {
+        "en": "Name of a DOODS detector: default (fast, tflite), tensorflow (more accurate, slower)… The Check action lists them.",
+        "fr": "Nom d'un détecteur DOODS : default (rapide, tflite), tensorflow (plus précis, plus lent)… L'action Vérifier les liste.",
+        "de": "Name eines DOODS-Detektors: default (schnell, tflite), tensorflow (genauer, langsamer)… Die Aktion Prüfen listet sie auf.",
+        "es": "Nombre de un detector de DOODS: default (rápido, tflite), tensorflow (más preciso, más lento)… La acción Comprobar los enumera."
+      },
       "required": false,
-      "default": "celsius",
+      "default": "default"
+    },
+    {
+      "key": "labels",
+      "type": "string",
+      "label": {
+        "en": "Objects to look for",
+        "fr": "Objets recherchés",
+        "de": "Gesuchte Objekte",
+        "es": "Objetos buscados"
+      },
+      "description": {
+        "en": "Detector labels in English, separated by commas (up to 8, each one a counter). * = every label. A camera can have its own list.",
+        "fr": "Étiquettes du détecteur en anglais, séparées par des virgules (8 au plus, chacune un compteur). * = toutes. Une caméra peut avoir sa propre liste.",
+        "de": "Labels des Detektors auf Englisch, durch Kommas getrennt (bis zu 8, je ein Zähler). * = alle. Eine Kamera kann ihre eigene Liste haben.",
+        "es": "Etiquetas del detector en inglés, separadas por comas (hasta 8, cada una un contador). * = todas. Una cámara puede tener su propia lista."
+      },
+      "placeholder": {
+        "en": "person, car, cat, dog",
+        "fr": "person, car, cat, dog",
+        "de": "person, car, cat, dog",
+        "es": "person, car, cat, dog"
+      },
+      "required": false,
+      "default": "person, car, cat, dog"
+    },
+    {
+      "key": "confidence",
+      "type": "select",
+      "label": {
+        "en": "Minimum confidence",
+        "fr": "Confiance minimale",
+        "de": "Mindestkonfidenz",
+        "es": "Confianza mínima"
+      },
+      "description": {
+        "en": "Detections below are ignored. Higher: fewer false alarms, more misses.",
+        "fr": "Les détections en dessous sont ignorées. Plus haut : moins de fausses alertes, plus d'oublis.",
+        "de": "Erkennungen darunter werden ignoriert. Höher: weniger Fehlalarme, mehr Übersehenes.",
+        "es": "Las detecciones por debajo se ignoran. Más alta: menos falsas alarmas, más omisiones."
+      },
+      "required": false,
+      "default": "60",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "30",
+          "label": {
+            "en": "30 %",
+            "fr": "30 %",
+            "de": "30 %",
+            "es": "30 %"
+          }
+        },
+        {
+          "value": "40",
+          "label": {
+            "en": "40 %",
+            "fr": "40 %",
+            "de": "40 %",
+            "es": "40 %"
+          }
+        },
+        {
+          "value": "50",
+          "label": {
+            "en": "50 %",
+            "fr": "50 %",
+            "de": "50 %",
+            "es": "50 %"
+          }
+        },
+        {
+          "value": "60",
+          "label": {
+            "en": "60 %",
+            "fr": "60 %",
+            "de": "60 %",
+            "es": "60 %"
+          }
+        },
+        {
+          "value": "70",
+          "label": {
+            "en": "70 %",
+            "fr": "70 %",
+            "de": "70 %",
+            "es": "70 %"
+          }
+        },
+        {
+          "value": "80",
+          "label": {
+            "en": "80 %",
+            "fr": "80 %",
+            "de": "80 %",
+            "es": "80 %"
+          }
+        },
+        {
+          "value": "90",
+          "label": {
+            "en": "90 %",
+            "fr": "90 %",
+            "de": "90 %",
+            "es": "90 %"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "interval",
+      "type": "select",
+      "label": {
+        "en": "Analysis interval",
+        "fr": "Intervalle d'analyse",
+        "de": "Analyseintervall",
+        "es": "Intervalo de análisis"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Each added camera is analyzed this often, one after the other. Every analysis takes CPU on the DOODS machine.",
+        "fr": "Chaque caméra ajoutée est analysée à ce rythme, l'une après l'autre. Chaque analyse consomme du processeur sur la machine de DOODS.",
+        "de": "Jede hinzugefügte Kamera wird in diesem Takt analysiert, eine nach der anderen. Jede Analyse kostet CPU auf dem DOODS-Rechner.",
+        "es": "Cada cámara añadida se analiza con esta frecuencia, una tras otra. Cada análisis consume CPU en la máquina de DOODS."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "60",
+      "options": [
+        {
+          "value": "0",
+          "label": {
+            "en": "On demand only",
+            "fr": "À la demande seulement",
+            "de": "Nur auf Anfrage",
+            "es": "Solo bajo demanda"
+          }
+        },
+        {
+          "value": "10",
+          "label": {
+            "en": "10 seconds",
+            "fr": "10 secondes",
+            "de": "10 Sekunden",
+            "es": "10 segundos"
+          }
+        },
+        {
+          "value": "30",
+          "label": {
+            "en": "30 seconds",
+            "fr": "30 secondes",
+            "de": "30 Sekunden",
+            "es": "30 segundos"
+          }
+        },
+        {
+          "value": "60",
+          "label": {
+            "en": "1 minute",
+            "fr": "1 minute",
+            "de": "1 Minute",
+            "es": "1 minuto"
+          }
+        },
+        {
+          "value": "300",
+          "label": {
+            "en": "5 minutes",
+            "fr": "5 minutes",
+            "de": "5 Minuten",
+            "es": "5 minutos"
+          }
+        },
+        {
+          "value": "900",
+          "label": {
+            "en": "15 minutes",
+            "fr": "15 minutes",
+            "de": "15 Minuten",
+            "es": "15 minutos"
+          }
+        },
+        {
+          "value": "3600",
+          "label": {
+            "en": "1 hour",
+            "fr": "1 heure",
+            "de": "1 Stunde",
+            "es": "1 hora"
+          }
+        }
+      ]
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the names",
+        "fr": "Langue des noms",
+        "de": "Sprache der Namen",
+        "es": "Idioma de los nombres"
+      },
+      "description": {
+        "en": "Feature names, objects and scene texts.",
+        "fr": "Noms des fonctionnalités, objets et textes des scènes.",
+        "de": "Namen der Funktionen, Objekte und Szenentexte.",
+        "es": "Nombres de las funciones, objetos y textos de las escenas."
+      },
+      "required": false,
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
+      ]
+    },
+    {
+      "key": "camera_1",
+      "type": "section",
+      "label": {
+        "en": "Camera 1",
+        "fr": "Caméra 1",
+        "de": "Kamera 1",
+        "es": "Cámara 1"
+      },
+      "description": {
+        "en": "A JPEG snapshot URL (http://user:password@camera/snapshot.jpg) or an RTSP stream. Leave the address empty to skip a camera.",
+        "fr": "Une URL d'instantané JPEG (http://utilisateur:motdepasse@camera/snapshot.jpg) ou un flux RTSP. Laissez l'adresse vide pour ne pas utiliser une caméra.",
+        "de": "Eine JPEG-Schnappschuss-URL (http://benutzer:passwort@kamera/snapshot.jpg) oder ein RTSP-Stream. Lass die Adresse leer, um eine Kamera auszulassen.",
+        "es": "Una URL de instantánea JPEG (http://usuario:contraseña@camara/snapshot.jpg) o un flujo RTSP. Deje la dirección vacía para no usar una cámara."
+      }
+    },
+    {
+      "key": "camera_1_name",
+      "type": "string",
+      "label": {
+        "en": "Name",
+        "fr": "Nom",
+        "de": "Name",
+        "es": "Nombre"
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_1_url",
+      "type": "string",
+      "label": {
+        "en": "Image address",
+        "fr": "Adresse de l'image",
+        "de": "Bildadresse",
+        "es": "Dirección de la imagen"
+      },
+      "placeholder": {
+        "en": "http://… or rtsp://…",
+        "fr": "http://… ou rtsp://…",
+        "de": "http://… oder rtsp://…",
+        "es": "http://… o rtsp://…"
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_1_labels",
+      "type": "string",
+      "label": {
+        "en": "Objects (optional)",
+        "fr": "Objets (facultatif)",
+        "de": "Objekte (optional)",
+        "es": "Objetos (opcional)"
+      },
+      "description": {
+        "en": "Empty: the general list.",
+        "fr": "Vide : la liste générale.",
+        "de": "Leer: die allgemeine Liste.",
+        "es": "Vacío: la lista general."
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_1_confidence",
+      "type": "string",
+      "label": {
+        "en": "Confidence in % (optional)",
+        "fr": "Confiance en % (facultatif)",
+        "de": "Konfidenz in % (optional)",
+        "es": "Confianza en % (opcional)"
+      },
+      "description": {
+        "en": "Empty: the general minimum.",
+        "fr": "Vide : le minimum général.",
+        "de": "Leer: das allgemeine Minimum.",
+        "es": "Vacío: el mínimo general."
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_2",
+      "type": "section",
+      "label": {
+        "en": "Camera 2",
+        "fr": "Caméra 2",
+        "de": "Kamera 2",
+        "es": "Cámara 2"
+      }
+    },
+    {
+      "key": "camera_2_name",
+      "type": "string",
+      "label": {
+        "en": "Name",
+        "fr": "Nom",
+        "de": "Name",
+        "es": "Nombre"
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_2_url",
+      "type": "string",
+      "label": {
+        "en": "Image address",
+        "fr": "Adresse de l'image",
+        "de": "Bildadresse",
+        "es": "Dirección de la imagen"
+      },
+      "placeholder": {
+        "en": "http://… or rtsp://…",
+        "fr": "http://… ou rtsp://…",
+        "de": "http://… oder rtsp://…",
+        "es": "http://… o rtsp://…"
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_2_labels",
+      "type": "string",
+      "label": {
+        "en": "Objects (optional)",
+        "fr": "Objets (facultatif)",
+        "de": "Objekte (optional)",
+        "es": "Objetos (opcional)"
+      },
+      "description": {
+        "en": "Empty: the general list.",
+        "fr": "Vide : la liste générale.",
+        "de": "Leer: die allgemeine Liste.",
+        "es": "Vacío: la lista general."
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_2_confidence",
+      "type": "string",
+      "label": {
+        "en": "Confidence in % (optional)",
+        "fr": "Confiance en % (facultatif)",
+        "de": "Konfidenz in % (optional)",
+        "es": "Confianza en % (opcional)"
+      },
+      "description": {
+        "en": "Empty: the general minimum.",
+        "fr": "Vide : le minimum général.",
+        "de": "Leer: das allgemeine Minimum.",
+        "es": "Vacío: el mínimo general."
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_3",
+      "type": "section",
+      "label": {
+        "en": "Camera 3",
+        "fr": "Caméra 3",
+        "de": "Kamera 3",
+        "es": "Cámara 3"
+      }
+    },
+    {
+      "key": "camera_3_name",
+      "type": "string",
+      "label": {
+        "en": "Name",
+        "fr": "Nom",
+        "de": "Name",
+        "es": "Nombre"
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_3_url",
+      "type": "string",
+      "label": {
+        "en": "Image address",
+        "fr": "Adresse de l'image",
+        "de": "Bildadresse",
+        "es": "Dirección de la imagen"
+      },
+      "placeholder": {
+        "en": "http://… or rtsp://…",
+        "fr": "http://… ou rtsp://…",
+        "de": "http://… oder rtsp://…",
+        "es": "http://… o rtsp://…"
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_3_labels",
+      "type": "string",
+      "label": {
+        "en": "Objects (optional)",
+        "fr": "Objets (facultatif)",
+        "de": "Objekte (optional)",
+        "es": "Objetos (opcional)"
+      },
+      "description": {
+        "en": "Empty: the general list.",
+        "fr": "Vide : la liste générale.",
+        "de": "Leer: die allgemeine Liste.",
+        "es": "Vacío: la lista general."
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_3_confidence",
+      "type": "string",
+      "label": {
+        "en": "Confidence in % (optional)",
+        "fr": "Confiance en % (facultatif)",
+        "de": "Konfidenz in % (optional)",
+        "es": "Confianza en % (opcional)"
+      },
+      "description": {
+        "en": "Empty: the general minimum.",
+        "fr": "Vide : le minimum général.",
+        "de": "Leer: das allgemeine Minimum.",
+        "es": "Vacío: el mínimo general."
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_4",
+      "type": "section",
+      "label": {
+        "en": "Camera 4",
+        "fr": "Caméra 4",
+        "de": "Kamera 4",
+        "es": "Cámara 4"
+      }
+    },
+    {
+      "key": "camera_4_name",
+      "type": "string",
+      "label": {
+        "en": "Name",
+        "fr": "Nom",
+        "de": "Name",
+        "es": "Nombre"
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_4_url",
+      "type": "string",
+      "label": {
+        "en": "Image address",
+        "fr": "Adresse de l'image",
+        "de": "Bildadresse",
+        "es": "Dirección de la imagen"
+      },
+      "placeholder": {
+        "en": "http://… or rtsp://…",
+        "fr": "http://… ou rtsp://…",
+        "de": "http://… oder rtsp://…",
+        "es": "http://… o rtsp://…"
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_4_labels",
+      "type": "string",
+      "label": {
+        "en": "Objects (optional)",
+        "fr": "Objets (facultatif)",
+        "de": "Objekte (optional)",
+        "es": "Objetos (opcional)"
+      },
+      "description": {
+        "en": "Empty: the general list.",
+        "fr": "Vide : la liste générale.",
+        "de": "Leer: die allgemeine Liste.",
+        "es": "Vacío: la lista general."
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "camera_4_confidence",
+      "type": "string",
+      "label": {
+        "en": "Confidence in % (optional)",
+        "fr": "Confiance en % (facultatif)",
+        "de": "Konfidenz in % (optional)",
+        "es": "Confianza en % (opcional)"
+      },
+      "description": {
+        "en": "Empty: the general minimum.",
+        "fr": "Vide : le minimum général.",
+        "de": "Leer: das allgemeine Minimum.",
+        "es": "Vacío: el mínimo general."
+      },
+      "required": false,
+      "default": ""
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
+      "key": "check",
+      "label": {
+        "en": "Check the connection",
+        "fr": "Vérifier la connexion",
+        "de": "Verbindung prüfen",
+        "es": "Comprobar la conexión"
+      },
+      "description": {
+        "en": "Asks DOODS for its detectors, then analyzes each camera once.",
+        "fr": "Demande ses détecteurs à DOODS, puis analyse chaque caméra une fois.",
+        "de": "Fragt DOODS nach seinen Detektoren und analysiert dann jede Kamera einmal.",
+        "es": "Pide sus detectores a DOODS y analiza cada cámara una vez."
+      },
+      "timeout_seconds": 120
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "object_detected",
+      "label": {
+        "en": "Object detected by DOODS",
+        "fr": "Objet détecté par DOODS",
+        "de": "Objekt von DOODS erkannt",
+        "es": "Objeto detectado por DOODS"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "An object appears in a regular analysis (absent from the previous one).",
+        "fr": "Un objet apparaît lors d'une analyse régulière (absent de la précédente).",
+        "de": "Ein Objekt erscheint bei einer regelmäßigen Analyse (in der vorherigen nicht da).",
+        "es": "Un objeto aparece en un análisis regular (ausente del anterior)."
       },
       "fields": [
         {
-          "key": "device",
+          "key": "camera",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": {
+            "en": "Camera",
+            "fr": "Caméra",
+            "de": "Kamera",
+            "es": "Cámara"
+          }
         },
         {
-          "key": "target",
+          "key": "label",
           "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "label": {
+            "en": "Objects",
+            "fr": "Objets",
+            "de": "Objekte",
+            "es": "Objetos"
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "person",
+              "label": {
+                "en": "Person",
+                "fr": "Personne",
+                "de": "Person",
+                "es": "Persona"
+              }
+            },
+            {
+              "value": "car",
+              "label": {
+                "en": "Car",
+                "fr": "Voiture",
+                "de": "Auto",
+                "es": "Coche"
+              }
+            },
+            {
+              "value": "truck",
+              "label": {
+                "en": "Truck",
+                "fr": "Camion",
+                "de": "Lkw",
+                "es": "Camión"
+              }
+            },
+            {
+              "value": "bus",
+              "label": {
+                "en": "Bus",
+                "fr": "Bus",
+                "de": "Bus",
+                "es": "Autobús"
+              }
+            },
+            {
+              "value": "bicycle",
+              "label": {
+                "en": "Bicycle",
+                "fr": "Vélo",
+                "de": "Fahrrad",
+                "es": "Bicicleta"
+              }
+            },
+            {
+              "value": "motorcycle",
+              "label": {
+                "en": "Motorcycle",
+                "fr": "Moto",
+                "de": "Motorrad",
+                "es": "Moto"
+              }
+            },
+            {
+              "value": "cat",
+              "label": {
+                "en": "Cat",
+                "fr": "Chat",
+                "de": "Katze",
+                "es": "Gato"
+              }
+            },
+            {
+              "value": "dog",
+              "label": {
+                "en": "Dog",
+                "fr": "Chien",
+                "de": "Hund",
+                "es": "Perro"
+              }
+            },
+            {
+              "value": "bird",
+              "label": {
+                "en": "Bird",
+                "fr": "Oiseau",
+                "de": "Vogel",
+                "es": "Pájaro"
+              }
+            },
+            {
+              "value": "horse",
+              "label": {
+                "en": "Horse",
+                "fr": "Cheval",
+                "de": "Pferd",
+                "es": "Caballo"
+              }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "camera_name",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Camera",
+            "fr": "Caméra",
+            "de": "Kamera",
+            "es": "Cámara"
+          }
+        },
+        {
+          "key": "label_name",
+          "type": "string",
+          "label": {
+            "en": "Object",
+            "fr": "Objet",
+            "de": "Objekt",
+            "es": "Objeto"
+          }
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "label": {
+            "en": "Count",
+            "fr": "Nombre",
+            "de": "Anzahl",
+            "es": "Número"
+          }
+        },
+        {
+          "key": "confidence",
+          "type": "number",
+          "label": {
+            "en": "Confidence (%)",
+            "fr": "Confiance (%)",
+            "de": "Konfidenz (%)",
+            "es": "Confianza (%)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "camera_unreachable",
+      "label": {
+        "en": "Camera image not read",
+        "fr": "Image de caméra non lue",
+        "de": "Kamerabild nicht gelesen",
+        "es": "Imagen de cámara no leída"
+      },
+      "description": {
+        "en": "The picture of a camera could not be read, the first time in a row.",
+        "fr": "L'image d'une caméra n'a pas pu être lue, la première fois d'affilée.",
+        "de": "Das Bild einer Kamera konnte nicht gelesen werden, beim ersten Mal in Folge.",
+        "es": "No se pudo leer la imagen de una cámara, la primera vez seguida."
+      },
+      "fields": [
+        {
+          "key": "camera",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Camera",
+            "fr": "Caméra",
+            "de": "Kamera",
+            "es": "Cámara"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "camera_name",
+          "type": "string",
+          "label": {
+            "en": "Camera",
+            "fr": "Caméra",
+            "de": "Kamera",
+            "es": "Cámara"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "analyze",
+      "label": {
+        "en": "Analyze a camera with DOODS",
+        "fr": "Analyser une caméra avec DOODS",
+        "de": "Kamera mit DOODS analysieren",
+        "es": "Analizar una cámara con DOODS"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Analyzes the camera now and updates its image, for the next actions.",
+        "fr": "Analyse la caméra maintenant et met à jour son image, pour les actions suivantes.",
+        "de": "Analysiert die Kamera jetzt und aktualisiert ihr Bild, für die nächsten Aktionen.",
+        "es": "Analiza la cámara ahora y actualiza su imagen, para las siguientes acciones."
+      },
+      "timeout_seconds": 45,
       "fields": [
         {
-          "key": "device",
+          "key": "camera",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": {
+            "en": "Camera",
+            "fr": "Caméra",
+            "de": "Kamera",
+            "es": "Cámara"
+          },
           "required": true
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
+          "key": "detected",
           "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "label": {
+            "en": "Object detected",
+            "fr": "Objet détecté",
+            "de": "Objekt erkannt",
+            "es": "Objeto detectado"
+          }
+        },
+        {
+          "key": "objects",
+          "type": "string",
+          "label": {
+            "en": "Objects detected",
+            "fr": "Objets détectés",
+            "de": "Erkannte Objekte",
+            "es": "Objetos detectados"
+          }
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "label": {
+            "en": "Number of objects",
+            "fr": "Nombre d'objets",
+            "de": "Anzahl der Objekte",
+            "es": "Número de objetos"
+          }
+        },
+        {
+          "key": "persons",
+          "type": "number",
+          "label": {
+            "en": "Number of persons",
+            "fr": "Nombre de personnes",
+            "de": "Anzahl der Personen",
+            "es": "Número de personas"
+          }
+        },
+        {
+          "key": "confidence",
+          "type": "number",
+          "label": {
+            "en": "Best confidence (%)",
+            "fr": "Meilleure confiance (%)",
+            "de": "Beste Konfidenz (%)",
+            "es": "Mejor confianza (%)"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "camera",
+      "label": {
+        "en": "DOODS camera",
+        "fr": "Caméra DOODS",
+        "de": "DOODS-Kamera",
+        "es": "Cámara DOODS"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "The analyzed image, the objects found, their count, and a button to analyze now.",
+        "fr": "L'image analysée, les objets trouvés, leur nombre, et un bouton pour analyser.",
+        "de": "Analysiertes Bild, gefundene Objekte, ihre Anzahl und eine Schaltfläche zum Analysieren.",
+        "es": "La imagen analizada, los objetos hallados, su número y un botón para analizar."
+      },
+      "icon": "eye",
+      "action_timeout_seconds": 45,
+      "settings": [
+        {
+          "key": "camera",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Camera",
+            "fr": "Caméra",
+            "de": "Kamera",
+            "es": "Cámara"
+          },
+          "required": true
+        },
+        {
+          "key": "hide_button",
+          "type": "boolean",
+          "label": {
+            "en": "Hide the Analyze button",
+            "fr": "Masquer le bouton Analyser",
+            "de": "Schaltfläche Analysieren ausblenden",
+            "es": "Ocultar el botón Analizar"
+          }
+        }
+      ]
     }
   ]
 }
